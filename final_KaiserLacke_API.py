@@ -3,6 +3,7 @@
 from pymongo import MongoClient
 from flask import Flask, request, jsonify
 app = Flask(__name__)
+server = app.server
 
 # Create a connection to the MongoDB server
 client = MongoClient('mongodb+srv://fraab:yqbUXmAN7YuzRl8F@heitecinnovations.h9cdy.mongodb.net/?retryWrites=true&w=majority&appName=HeitecInnovations')
@@ -38,7 +39,23 @@ def get_pv():
     PV = PV_old + PV_new
     filtered_PV = [{"time": doc["time"], "pv": doc["W"]/1000} for doc in PV]
     filtered_PV = sorted(filtered_PV, key=lambda x: x['time'])
-    
+    #grouping pv data
+    import math
+    def reduce_data(data, reduction_factor):
+        # Calculate the desired number of output rows
+        target_length = len(data) // reduction_factor
+        # Calculate the interval based on the target length
+        interval = len(data) // target_length
+        reduced_data = []
+        for i in range(0, len(data), interval):
+            end = min(i + interval, len(data))
+            group = data[i:end]
+            avg_time = sum(item['time'] for item in group) / len(group)
+            avg_pv = sum(item['pv'] for item in group) / len(group)
+            reduced_data.append({'time': avg_time, 'pv': avg_pv})
+        return reduced_data
+
+    filtered_PV = reduce_data(filtered_PV, 6)
     pv_data = []
     # Print each document
     for document in filtered_PV:
